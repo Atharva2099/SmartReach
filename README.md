@@ -143,22 +143,4 @@ Future Enhancements
 
 ⸻
 
-Detailed Workflow Recap
-	1.	[0] HOME:
-On system start, the robot transitions from HOME to ACTIVE.
-	2.	[1] ACTIVE:
-Depending on the command, the robot may:
-	•	Move to a specific check position (e.g., “check position X”)
-	•	Begin a random search (e.g., “find object”)
-	•	Transition to show the object to a human (“show me”)
-	•	Drop the object if a hand is detected (“drop it”)
-	•	Return to HOME when commanded or during shutdown
-	3.	[2/4/6] Check Position:
-The robot captures an image and sends it to Gemini for analysis. If the object is detected, it transitions to the corresponding Pick state. Otherwise, it either continues searching (in search mode) or returns to ACTIVE (in direct mode).
-	4.	[3/5/7] Pick + Return:
-Once the object is confirmed, the robot executes the pick action and then returns to the ACTIVE state.
-	5.	[8] Show to Human & [9] Drop:
-The robot may move to a position to show the object or drop it based on additional commands or sensor feedback.
-
-This detailed documentation should help both developers and users understand the inner workings and workflow of SmartReach.
 
