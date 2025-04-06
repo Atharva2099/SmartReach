@@ -3,237 +3,191 @@ import queue
 import time
 import json
 import cv2
+import sys
 import os
-import logging
-from datetime import datetime
 
-from robotRecording import execute_positions  # Now using our enhanced version
-from utils.gemini_api import process_image, setup_gemini_api
+# Import for MQTT integration
+from utils.mqtt_client import start_mqtt_client, stop_mqtt_client, go_to_position, set_broker_address, client
+from utils.gemini_api import process_image
 
-# Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(f"robot_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
+# Determine if we should use MQTT (True) or local robot control (False)
+USE_MQTT = True  # Set to False to use local robot control functions
 
-# Load robot sequences from JSON file.
-try:
+# Load robot sequences from JSON file for local control mode
+sequences = {}
+if os.path.exists("robot_sequences.json"):
     with open("robot_sequences.json") as f:
         # This builds a dictionary keyed by the "key" value in the JSON.
         sequences = {x["key"]: x for x in json.load(f)}
-    logger.info(f"Loaded {len(sequences)} sequences from robot_sequences.json")
-except Exception as e:
-    logger.error(f"Failed to load robot_sequences.json: {str(e)}")
-    raise
 
-# Ensure Gemini API is set up
-try:
-    setup_gemini_api()
-    logger.info("Gemini API setup completed")
-except Exception as e:
-    logger.error(f"Failed to set up Gemini API: {str(e)}")
-    raise
+# Import local robot control functions only if needed
+if not USE_MQTT:
+    from robotRecording import execute_positions
 
-# Global queue for thread communication
+# Global queue for communication between threads
 gemini_result_queue = queue.Queue()
 
 def capture_image():
-    """
-    Capture an image from the camera.
-    
-    Returns:
-        numpy.ndarray: The captured image, or None if capture failed
-    
-    Raises:
-        Exception: If camera access fails
-    """
-    logger.info("Capturing image from camera")
-    try:
-        cap = cv2.VideoCapture(0)
-        ret, frame = cap.read()
-        cap.release()
-        
-        if ret:
-            # Save a copy of the image for debugging
-            os.makedirs("captured_images", exist_ok=True)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            cv2.imwrite(f"captured_images/capture_{timestamp}.jpg", frame)
-            logger.info(f"Image captured and saved to captured_images/capture_{timestamp}.jpg")
-            return frame
-        else:
-            logger.error("Camera returned no image")
-            raise Exception("Camera returned no image")
-    except Exception as e:
-        logger.error(f"Camera error: {str(e)}")
-        raise Exception(f"Camera error: {str(e)}")
+    """Capture an image from the webcam."""
+    cap = cv2.VideoCapture(0)
+    ret, frame = cap.read()
+    cap.release()
+    if ret:
+        return frame
+    else:
+        raise Exception("Camera error")
 
-def go_to_position(pos_key):
+def go_to_position_local(pos_key):
     """
-    Move the robot to a specific position sequence.
+    Local implementation of robot control (used when MQTT is disabled).
+    Moves the robot to the specified position using local control.
+    """
+    print(f"Moving to position {pos_key}")
+    if pos_key not in sequences:
+        print(f"Error: Position {pos_key} not found in sequences")
+        return False
     
-    Args:
-        pos_key: The key of the position sequence to execute
-        
-    Returns:
-        bool: True if successful, False otherwise
-    """
+    steps = sequences[pos_key]["positions"]
     try:
-        logger.info(f"Moving to position {pos_key}")
-        if pos_key not in sequences:
-            logger.error(f"Position key {pos_key} not found in sequences")
-            return False
-            
-        steps = sequences[pos_key]["positions"]
-        logger.info(f"Executing {len(steps)} steps for position {pos_key}")
-        
-        for i, step in enumerate(steps):
-            logger.info(f"Step {i+1}/{len(steps)}: {step}")
-            success = execute_positions(step)
-            if not success:
-                logger.warning(f"Step {i+1} execution reported failure")
+        for step in steps:
+            execute_positions(step)
             time.sleep(0.1)
-        
-        logger.info(f"Position {pos_key} execution completed")
         return True
     except Exception as e:
-        logger.error(f"Error in go_to_position({pos_key}): {str(e)}")
+        print(f"Error executing position: {e}")
         return False
 
-def gemini_thread(image, object_name, pos_id):
+def gemini_thread(image, object_name, pos_id=None):
     """
-    Process an image with Gemini in a separate thread.
+    Thread function to process image with Gemini API.
     
     Args:
-        image: The image to analyze (NumPy array from OpenCV)
-        object_name: The name of the object to look for (e.g., "bottle")
-        pos_id: Position ID for context
+        image: The captured image to analyze
+        object_name: The name of the object to look for
+        pos_id: Optional position ID for logging
     """
-    logger.info(f"Starting Gemini analysis for object '{object_name}' at position {pos_id}")
+    prompt = f"Is there a {object_name} in this image? Respond with 'found' or 'not found' only."
+    
     try:
-        # Create a prompt specifically asking about the object
-        prompt = f"Is there a {object_name} in this image?"
+        result_text = process_image(image, prompt)
+        found = "found" in result_text.lower()
+        print(f"Gemini result: {'Found' if found else 'Not found'} at position {pos_id}")
         
-        # Call the process_image function with position ID
-        result = process_image(image, prompt, pos_id)
-        
-        # Log the result summary
-        logger.info(f"Gemini result for position {pos_id}: Found={result['found']}")
-        logger.info(f"Gemini response: {result['text'][:100]}...")
-        
-        # Put the result in the queue for the main thread to process
+        result = {
+            "found": found,
+            "position": pos_id,
+            "text": result_text
+        }
         gemini_result_queue.put(result)
     except Exception as e:
-        logger.error(f"Error in Gemini thread: {str(e)}")
-        # Put a failure result in the queue so the main thread doesn't hang
-        gemini_result_queue.put({
-            "found": False,
-            "text": f"Error in Gemini analysis: {str(e)}",
-            "position": pos_id,
-            "error": True
-        })
+        print(f"Error in Gemini processing: {e}")
+        gemini_result_queue.put({"found": False, "error": str(e)})
 
 def main():
-    logger.info("System started")
+    print("SmartReach System Starting")
     
-    try:
-        logger.info("Moving to ACTIVE state")
-        if not go_to_position(1):  # ACTIVE state is assumed to be key 1
-            logger.error("Failed to reach ACTIVE state")
+    # Allow setting the broker IP from command line
+    if len(sys.argv) > 1:
+        broker_ip = sys.argv[1]
+        set_broker_address(broker_ip)
+        print(f"Using broker address: {broker_ip}")
+    
+    # Initialize MQTT if enabled
+    if USE_MQTT:
+        if not start_mqtt_client():
+            print("Failed to start MQTT client. Exiting.")
             return
-        
-        state = 1
-        visited = set()
-        object_to_find = "bottle"  # This could be made configurable
-        logger.info(f"Search initialized for object: {object_to_find}")
-        
+    
+    print("System started. Moving to ACTIVE state.")
+    # Choose the appropriate function based on mode
+    position_func = go_to_position if USE_MQTT else go_to_position_local
+    
+    # Move to ACTIVE state (position 1)
+    if not position_func(1):
+        print("Failed to move to ACTIVE state. Exiting.")
+        if USE_MQTT:
+            stop_mqtt_client()
+        return
+    
+    state = 1
+    visited = set()
+    object_to_find = "bottle"
+
+    try:
         while True:
             if state == 1:
-                # Choose the next position to check (2, 4, 6)
+                # Choose the next position to check (2, 4, 6).
                 next_pos = [2, 4, 6]
                 next_pos = [p for p in next_pos if p not in visited]
-                
                 if not next_pos:
-                    logger.info("Object not found in any position. Search complete.")
+                    print("Object not found in any position.")
                     break
-                
+
                 pos = next_pos[0]
                 visited.add(pos)
-                logger.info(f"Checking position {pos} (positions checked: {visited})")
                 
-                if not go_to_position(pos):
-                    logger.error(f"Failed to reach position {pos}")
+                print(f"Moving to position {pos} to check for {object_to_find}...")
+                success = position_func(pos)
+                if not success:
+                    print("Failed to move to position, retrying...")
+                    time.sleep(2)  # Short delay before retry
                     continue
                 
+                print("Capturing image...")
                 try:
                     frame = capture_image()
-                    # Start Gemini processing in a separate thread
-                    thread = threading.Thread(
-                        target=gemini_thread, 
-                        args=(frame, object_to_find, pos)
-                    )
-                    thread.start()
-                    logger.info(f"Started Gemini analysis thread for position {pos}")
+                    print("Processing with Gemini...")
+                    # Start Gemini processing in a separate thread.
+                    threading.Thread(target=gemini_thread, args=(frame, object_to_find, pos)).start()
                     state = 99  # Waiting for Gemini result
                 except Exception as e:
-                    logger.error(f"Error during image capture: {str(e)}")
-                    state = 1  # Stay in state 1 to try the next position
-            
+                    print(f"Error during image capture: {e}")
+                    state = 1  # Return to active state to try next position
+
             elif state == 99:
-                # Check if there's a result from Gemini
                 if not gemini_result_queue.empty():
                     result = gemini_result_queue.get()
-                    
-                    # Check if there was an error in the Gemini thread
-                    if result.get("error", False):
-                        logger.error(f"Gemini thread reported an error: {result.get('text', 'Unknown error')}")
-                        state = 1  # Move on to the next position
+                    if "error" in result:
+                        print(f"Error from Gemini thread: {result['error']}")
+                        state = 1  # Try the next position
                         continue
-                    
-                    pos = result.get("position")
+                        
                     if result["found"]:
-                        logger.info(f"Object found at position {pos}! Executing pick sequence.")
-                        
-                        # Assuming the pick state is one position after the check
+                        print(f"Found {object_to_find}! Executing pick operation.")
+                        # Assuming the pick state is one position after the check.
                         pick_pos = pos + 1
-                        if pick_pos in sequences:
-                            if not go_to_position(pick_pos):
-                                logger.error(f"Failed to execute pick sequence at position {pick_pos}")
-                            else:
-                                logger.info(f"Pick sequence at position {pick_pos} completed")
+                        success = position_func(pick_pos)
+                        if success:
+                            print("Pick operation completed. Returning to ACTIVE state.")
+                            position_func(1)  # Return to ACTIVE state.
+                            break
                         else:
-                            logger.error(f"Pick position {pick_pos} not defined in sequences")
-                        
-                        # Return to ACTIVE state
-                        if not go_to_position(1):
-                            logger.error("Failed to return to ACTIVE state")
-                        
-                        logger.info("Task completed successfully")
-                        break
+                            print("Pick operation failed. Returning to ACTIVE state.")
+                            position_func(1)
+                            break
                     else:
-                        logger.info(f"Object not found at position {pos}. Trying next position.")
-                        state = 1  # Go back to state 1 to try the next position
+                        print(f"{object_to_find} not found at position {pos}. Trying next position.")
+                        state = 1
                 else:
-                    # Still waiting for Gemini, sleep a bit
+                    # Brief pause to prevent CPU spinning while waiting for Gemini result
                     time.sleep(0.1)
-    
     except KeyboardInterrupt:
-        logger.info("System interrupted by user")
+        print("\nProgram interrupted by user")
     except Exception as e:
-        logger.error(f"Unexpected error in main: {str(e)}")
+        print(f"\nError in main control loop: {e}")
     finally:
-        # Ensure we end in a safe state
+        # Try to return to a safe position
+        print("Returning to ACTIVE state...")
         try:
-            logger.info("Returning to HOME state")
-            go_to_position(0)  # Assuming 0 is HOME
-        except Exception as e:
-            logger.error(f"Error returning to HOME: {str(e)}")
+            position_func(1)
+        except:
+            pass
+            
+        # Clean up MQTT client if enabled
+        if USE_MQTT:
+            stop_mqtt_client()
         
-        logger.info("System shutdown complete")
+        print("System shutdown complete")
 
 if __name__ == "__main__":
     main()
