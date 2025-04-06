@@ -1,4 +1,3 @@
-# File: mqtt_test.py
 from utils.mqtt_client import start_mqtt_client, send_position_command, stop_mqtt_client
 import time
 

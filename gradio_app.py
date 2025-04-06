@@ -2,7 +2,11 @@ import gradio as gr
 import random
 import time
 from utils.gemini_api import process_image
-from utils.mqtt_client import start_mqtt_client, send_position_command, stop_mqtt_client
+from utils.mqtt_client import start_mqtt_client, stop_mqtt_client, send_position_command, action_done_event
+
+def wait_for_action():
+    action_done_event.wait()
+    action_done_event.clear()
 
 def process_and_display(image, object_query):
     if image is None:
@@ -15,16 +19,17 @@ def process_and_display(image, object_query):
     
     for pos in random.sample(check_positions, len(check_positions)):
         send_position_command(pos)
-        time.sleep(2)
+        wait_for_action()
         prompt = f"Is there a {object_query} in frame? Answer yes or no."
         decision_text = process_image(image, prompt)
         if decision_text == "yes":
             send_position_command(pick_map[pos])
-            time.sleep(5)
+            wait_for_action()
             found = True
             break
     if not found:
         send_position_command(1)
+        wait_for_action()
     
     return image, decision_text
 

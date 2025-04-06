@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import numpy as np
 from pydantic import BaseModel, ValidationError, validator
 
+
 class GeminiDecision(BaseModel):
     decision: str
 
@@ -27,8 +28,12 @@ def process_image(image, text_prompt):
         image = Image.fromarray(image)
     setup_gemini_api()
     model = GenerativeModel(model_name="models/gemini-2.0-flash")
-    # Use a prompt that instructs a strict yes/no answer.
     refined_prompt = f"{text_prompt}\nPlease answer only yes or no."
-    # Remove the temperature parameter (not supported)
     response = model.generate_content([refined_prompt, image])
-    return response.text.strip()
+    decision_str = response.text.strip()
+    try:
+        decision_obj = GeminiDecision(decision=decision_str)
+        return decision_obj.decision
+    except ValidationError as e:
+        print("Pydantic validation error:", e)
+        return "no"
