@@ -1,4 +1,3 @@
-# File: utils/mqtt_client.py
 import paho.mqtt.client as mqtt
 import json
 import logging
@@ -6,7 +5,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-MQTT_BROKER = "10.0.0.42"  # Linux machine's IP
+MQTT_BROKER = "10.0.0.42"  # Updated to the Linux machine's IP address
 MQTT_PORT = 1883
 TOPIC_COMMAND = "smartreach/command"
 
