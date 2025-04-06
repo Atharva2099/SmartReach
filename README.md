@@ -65,6 +65,7 @@ The Gradio interface (gradio_app.py) displays a live webcam feed and accepts tex
 The repository is managed using Git. Sensitive files (e.g., .env) and system files (e.g., __pycache__, .DS_Store) are excluded via .gitignore. The branch is renamed from master to main before pushing to ensure compliance with modern Git practices.
 
 ⸻
+```
 
 Setup and Running the Project
 
@@ -76,19 +77,25 @@ Prerequisites
 Installation Steps
 	1.	Clone the Repository:
 
+```bash
 git clone https://github.com/Atharva2099/SmartReach.git
 cd SmartReach
+```
 
 
 	2.	Set Up a Virtual Environment:
 
+```bash
 python3 -m venv so100arm
 source so100arm/bin/activate
+```
 
 
 	3.	Install Dependencies:
 
+```bash
 pip install -r requirements.txt
+```
 
 
 	4.	Configure Environment Variables:
