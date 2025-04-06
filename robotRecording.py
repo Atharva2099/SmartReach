@@ -167,13 +167,77 @@ def record_sequence(motor_bus):
 
 # === Primary Functionality ===
 
-def execute_positions(step):
+def execute_positions(step, motor_bus=None):
     """
-    Execute a given robot step.
-    This function sends a single robot step command to the motors.
+    Execute a given robot step by sending position commands to the motors.
+    
+    Args:
+        step: A list of position values for each motor [pos1, pos2, pos3, pos4, pos5, pos6]
+        motor_bus: Optional motor bus instance. If None, create a temporary one.
+    
+    Returns:
+        bool: True if execution was successful, False otherwise
     """
     print(f"Executing step: {step}")
-    # Insert your actual robot control code here.
+    
+    # If no motor_bus was provided, create a temporary one
+    temp_bus = False
+    if motor_bus is None:
+        temp_bus = True
+        config = FeetechMotorsBusConfig(
+            port=PORT,
+            motors={"motor": (-1, MOTOR_MODEL)},
+        )
+        motor_bus = FeetechMotorsBus(config)
+        motor_bus.connect()
+    
+    try:
+        # Validate input
+        if len(step) != len(MOTOR_IDS):
+            raise ValueError(f"Expected {len(MOTOR_IDS)} position values, got {len(step)}")
+        
+        # This is where we would send the actual commands to the motors
+        # For a real implementation with Feetech motors, it might look like:
+        # for motor_id, target_position in zip(MOTOR_IDS, step):
+        #     motor_bus.write_with_motor_id(
+        #         motor_model=MOTOR_MODEL,
+        #         motor_id=motor_id,
+        #         data_name="Goal_Position",
+        #         data_value=target_position
+        #     )
+        
+        # For now, we'll simulate by printing the command
+        for motor_id, target_position in zip(MOTOR_IDS, step):
+            print(f"  Motor {motor_id} → Position {target_position}")
+        
+        # In a real implementation, we would wait for the motion to complete
+        # time.sleep(0.5)  # Simple delay approach
+        
+        # A better approach would be to poll until positions are reached:
+        # max_attempts = 50
+        # attempts = 0
+        # while attempts < max_attempts:
+        #     current_positions = get_position(motor_bus)
+        #     if all(abs(current - target) < POSITION_TOLERANCE 
+        #            for current, target in zip(current_positions, step)):
+        #         break
+        #     time.sleep(0.1)
+        #     attempts += 1
+        
+        # if attempts >= max_attempts:
+        #     print("Warning: Timeout waiting for motors to reach target positions")
+        
+        print(f"Step execution completed")
+        return True
+        
+    except Exception as e:
+        print(f"Error executing position: {str(e)}")
+        return False
+        
+    finally:
+        # Clean up the temporary bus if we created one
+        if temp_bus and motor_bus is not None:
+            motor_bus.disconnect()
 
 def main():
     print("Robot Position Recorder")

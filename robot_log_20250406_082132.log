@@ -1,0 +1,56 @@
+2025-04-06 08:21:32,235 - INFO - Loaded 10 sequences from robot_sequences.json
+2025-04-06 08:21:32,236 - INFO - Gemini API setup completed
+2025-04-06 08:21:32,236 - INFO - System started
+2025-04-06 08:21:32,236 - INFO - Moving to ACTIVE state
+2025-04-06 08:21:32,236 - INFO - Moving to position 1
+2025-04-06 08:21:32,236 - INFO - Executing 1 steps for position 1
+2025-04-06 08:21:32,236 - INFO - Step 1/1: [2167, 1528, 2610, 2932, 1887, 1031]
+2025-04-06 08:21:32,341 - INFO - Position 1 execution completed
+2025-04-06 08:21:32,341 - INFO - Search initialized for object: bottle
+2025-04-06 08:21:32,341 - INFO - Checking position 2 (positions checked: {2})
+2025-04-06 08:21:32,341 - INFO - Moving to position 2
+2025-04-06 08:21:32,341 - INFO - Executing 1 steps for position 2
+2025-04-06 08:21:32,341 - INFO - Step 1/1: [2344, 2148, 2025, 2702, 1884, 1031]
+2025-04-06 08:21:32,444 - INFO - Position 2 execution completed
+2025-04-06 08:21:32,444 - INFO - Capturing image from camera
+2025-04-06 08:21:34,055 - INFO - Image captured and saved to captured_images/capture_20250406_082134.jpg
+2025-04-06 08:21:34,055 - INFO - Starting Gemini analysis for object 'bottle' at position 2
+2025-04-06 08:21:34,055 - INFO - Started Gemini analysis thread for position 2
+2025-04-06 08:21:36,250 - INFO - Gemini result for position 2: Found=False
+2025-04-06 08:21:36,250 - INFO - Gemini response: No. I cannot see a bottle in the image....
+2025-04-06 08:21:36,331 - INFO - Object not found at position 2. Trying next position.
+2025-04-06 08:21:36,331 - INFO - Checking position 4 (positions checked: {2, 4})
+2025-04-06 08:21:36,331 - INFO - Moving to position 4
+2025-04-06 08:21:36,332 - INFO - Executing 2 steps for position 4
+2025-04-06 08:21:36,332 - INFO - Step 1/2: [2161, 1194, 2867, 2028, 1886, 1024]
+2025-04-06 08:21:36,437 - INFO - Step 2/2: [2060, 2141, 2185, 2463, 1886, 1024]
+2025-04-06 08:21:36,542 - INFO - Position 4 execution completed
+2025-04-06 08:21:36,542 - INFO - Capturing image from camera
+2025-04-06 08:21:36,815 - INFO - Image captured and saved to captured_images/capture_20250406_082136.jpg
+2025-04-06 08:21:36,815 - INFO - Starting Gemini analysis for object 'bottle' at position 4
+2025-04-06 08:21:36,815 - INFO - Started Gemini analysis thread for position 4
+2025-04-06 08:21:38,504 - INFO - Gemini result for position 4: Found=True
+2025-04-06 08:21:38,504 - INFO - Gemini response: Yes. A bottle appears to be visible in the image. It is located in the center of the image....
+2025-04-06 08:21:38,584 - INFO - Object found at position 4! Executing pick sequence.
+2025-04-06 08:21:38,584 - INFO - Moving to position 5
+2025-04-06 08:21:38,585 - INFO - Executing 7 steps for position 5
+2025-04-06 08:21:38,585 - INFO - Step 1/7: [2067, 2140, 2185, 2463, 1886, 1024]
+2025-04-06 08:21:38,687 - INFO - Step 2/7: [2013, 2020, 2900, 1344, 1886, 1025]
+2025-04-06 08:21:38,792 - INFO - Step 3/7: [2078, 2020, 2902, 1344, 1886, 2077]
+2025-04-06 08:21:38,893 - INFO - Step 4/7: [2115, 2630, 2105, 1632, 1888, 2086]
+2025-04-06 08:21:38,997 - INFO - Step 5/7: [2115, 2627, 2106, 1632, 1888, 1031]
+2025-04-06 08:21:39,099 - INFO - Step 6/7: [2124, 1750, 2597, 1901, 1887, 1031]
+2025-04-06 08:21:39,203 - INFO - Step 7/7: [2125, 1047, 2993, 2171, 1888, 1031]
+2025-04-06 08:21:39,304 - INFO - Position 5 execution completed
+2025-04-06 08:21:39,304 - INFO - Pick sequence at position 5 completed
+2025-04-06 08:21:39,304 - INFO - Moving to position 1
+2025-04-06 08:21:39,305 - INFO - Executing 1 steps for position 1
+2025-04-06 08:21:39,305 - INFO - Step 1/1: [2167, 1528, 2610, 2932, 1887, 1031]
+2025-04-06 08:21:39,410 - INFO - Position 1 execution completed
+2025-04-06 08:21:39,410 - INFO - Task completed successfully
+2025-04-06 08:21:39,410 - INFO - Returning to HOME state
+2025-04-06 08:21:39,410 - INFO - Moving to position 0
+2025-04-06 08:21:39,410 - INFO - Executing 1 steps for position 0
+2025-04-06 08:21:39,410 - INFO - Step 1/1: [2177, 856, 3088, 2927, 1887, 1031]
+2025-04-06 08:21:39,515 - INFO - Position 0 execution completed
+2025-04-06 08:21:39,516 - INFO - System shutdown complete
